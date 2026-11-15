@@ -1,4 +1,4 @@
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '../config/config.service.js';
@@ -11,12 +11,14 @@ export interface Credentials {
 }
 
 /**
- * Auth is off unless ApiKey or AdminUser + AdminPassword are set. When on, a request
- * needs either the API key or a token from POST /api/auth/login.
+ * Auth is off unless ApiKey, AdminUser + AdminPassword, or GitHub sign-in is set. When on, a request
+ * needs either the API key or a login token (from POST /api/auth/login or GitHub sign-in).
  */
 @Injectable()
 export class AuthService {
   private readonly jwt: JwtService;
+  /** Signs the short-lived GitHub sign-in cookie with its own key, so it never passes as a login token. */
+  private readonly flowJwt: JwtService;
 
   constructor(
     private readonly config: ConfigService,
@@ -24,13 +26,16 @@ export class AuthService {
   ) {
     const { JwtSecret, JwtExpiresIn } = config.values;
 
-    if (config.loginEnabled && !JwtSecret) {
+    if (config.tokensEnabled && !JwtSecret) {
       log.warn('JwtSecret is not set; using a random one, so logins end when the service restarts.');
     }
 
-    this.jwt = new JwtService({
-      secret: JwtSecret || randomBytes(32).toString('hex'),
-      signOptions: { expiresIn: JwtExpiresIn as `${number}` },
+    const secret = JwtSecret || randomBytes(32).toString('hex');
+
+    this.jwt = new JwtService({ secret, signOptions: { expiresIn: JwtExpiresIn as `${number}` } });
+    this.flowJwt = new JwtService({
+      secret: createHmac('sha256', secret).update('watchdog:github-flow').digest('hex'),
+      signOptions: { expiresIn: '5m' },
     });
   }
 
@@ -40,6 +45,10 @@ export class AuthService {
 
   get loginEnabled(): boolean {
     return this.config.loginEnabled;
+  }
+
+  get githubEnabled(): boolean {
+    return this.config.githubEnabled;
   }
 
   get tokenLifetime(): string {
@@ -57,12 +66,33 @@ export class AuthService {
     return userMatches && passwordMatches ? this.jwt.sign({ sub: username }) : null;
   }
 
+  /** A login token for a user GitHub sign-in has already checked against AllowedUserIds. */
+  issue(username: string): string {
+    return this.jwt.sign({ sub: username });
+  }
+
+  signFlow(verifier: string): string {
+    return this.flowJwt.sign({ verifier });
+  }
+
+  /** The PKCE verifier from a valid, unexpired flow cookie, otherwise null. */
+  readFlow(cookie: string | undefined): string | null {
+    if (!cookie) return null;
+
+    try {
+      const { verifier } = this.flowJwt.verify<{ verifier?: unknown }>(cookie);
+
+      return typeof verifier === 'string' ? verifier : null;
+    } catch {
+      return null;
+    }
+  }
+
   authenticate({ apiKey, token }: Credentials): boolean {
     if (!this.enabled) return true;
-
     if (apiKey && this.config.values.ApiKey && safeEqual(apiKey, this.config.values.ApiKey)) return true;
 
-    if (token && this.loginEnabled) {
+    if (token && this.config.tokensEnabled) {
       try {
         this.jwt.verify(token);
 

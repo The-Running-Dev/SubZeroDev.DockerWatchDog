@@ -19,7 +19,7 @@ describe('Auth', () => {
     await request(t.app.getHttpServer()).get('/api/projects').expect(200);
     await request(t.app.getHttpServer())
       .get('/api/auth/status')
-      .expect(200, { authEnabled: false, loginEnabled: false });
+      .expect(200, { authEnabled: false, loginEnabled: false, githubEnabled: false });
     await request(t.app.getHttpServer()).post('/api/auth/login').send({ username: 'a', password: 'b' }).expect(404);
   });
 
@@ -41,7 +41,7 @@ describe('Auth', () => {
     await request(t.app.getHttpServer()).get('/health').expect(200);
     await request(t.app.getHttpServer())
       .get('/api/auth/status')
-      .expect(200, { authEnabled: true, loginEnabled: false });
+      .expect(200, { authEnabled: true, loginEnabled: false, githubEnabled: false });
   });
 
   it('logs in with the admin credentials and accepts the token', async () => {

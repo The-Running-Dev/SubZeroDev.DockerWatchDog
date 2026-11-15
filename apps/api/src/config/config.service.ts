@@ -10,8 +10,19 @@ export class ConfigService {
     return Boolean(this.values.AdminUser && this.values.AdminPassword);
   }
 
+  get githubEnabled(): boolean {
+    const { SupabaseUrl, SupabasePublishableKey, AllowedUserIds, PublicUrl } = this.values;
+
+    return Boolean(SupabaseUrl && SupabasePublishableKey && AllowedUserIds.length && PublicUrl);
+  }
+
+  /** Login tokens are issued by the admin login or by GitHub sign-in. */
+  get tokensEnabled(): boolean {
+    return this.loginEnabled || this.githubEnabled;
+  }
+
   get authEnabled(): boolean {
-    return Boolean(this.values.ApiKey) || this.loginEnabled;
+    return Boolean(this.values.ApiKey) || this.tokensEnabled;
   }
 
   /** The config with every secret replaced by a mask (or left empty when unset). */
