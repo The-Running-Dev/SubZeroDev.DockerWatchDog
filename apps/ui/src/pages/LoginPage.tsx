@@ -1,16 +1,18 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import GitHubIcon from '@mui/icons-material/GitHub';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
 import Link from '@mui/material/Link';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { loginRequestSchema, type Info, type LoginRequest, type LoginResponse } from '@subzerodev/watchdog-shared';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Navigate, useLocation } from 'react-router';
+import { Navigate, useLocation, useNavigate } from 'react-router';
 import { z } from 'zod';
 import { api, ApiError } from '../api/client';
 import { useAuthStatus } from '../auth/useAuthStatus';
@@ -119,18 +121,51 @@ function ApiKeyForm() {
   );
 }
 
+/**
+ * GitHub sign-in ends at /login#token=…&username=… (or /login?error=…). Takes the token once and
+ * removes it from the address bar and history.
+ */
+function useGitHubReturn(): string | undefined {
+  const signIn = useAuthStore((state) => state.signIn);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [githubError] = useState(() => new URLSearchParams(location.search).get('error') ?? undefined);
+
+  useEffect(() => {
+    const hash = new URLSearchParams(location.hash.slice(1));
+    const token = hash.get('token');
+    const username = hash.get('username');
+
+    if (!location.hash && !location.search) return;
+
+    navigate({ pathname: location.pathname }, { replace: true, state: location.state });
+    if (token && username) signIn({ kind: 'token', token, username });
+  }, [location, navigate, signIn]);
+
+  return githubError;
+}
+
+function GitHubButton() {
+  return (
+    <Button variant="contained" startIcon={<GitHubIcon />} href="/api/auth/github" fullWidth>
+      Sign in with GitHub
+    </Button>
+  );
+}
+
 export function LoginPage() {
   const { status, error, retry } = useAuthStatus();
   const credential = useAuthStore((state) => state.credential);
   const location = useLocation();
   const [useKey, setUseKey] = useState(false);
+  const githubError = useGitHubReturn();
   const from = (location.state as { from?: string } | null)?.from ?? '/';
 
   if (error) return <Unreachable onRetry={retry} />;
   if (!status) return <Loading label="Connecting to the API…" />;
   if (!status.authEnabled || credential) return <Navigate to={from} replace />;
 
-  const showKey = useKey || !status.loginEnabled;
+  const showKey = useKey || (!status.loginEnabled && !status.githubEnabled);
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', px: 2 }}>
@@ -141,8 +176,21 @@ export function LoginPage() {
         <Typography color="text.secondary" sx={{ mb: 3 }}>
           {showKey ? 'Enter the API key to continue.' : 'Sign in to continue.'}
         </Typography>
-        {showKey ? <ApiKeyForm /> : <PasswordForm />}
-        {status.loginEnabled && (
+        {githubError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {githubError}
+          </Alert>
+        )}
+        {showKey ? (
+          <ApiKeyForm />
+        ) : (
+          <Stack spacing={2}>
+            {status.githubEnabled && <GitHubButton />}
+            {status.githubEnabled && status.loginEnabled && <Divider>or</Divider>}
+            {status.loginEnabled && <PasswordForm />}
+          </Stack>
+        )}
+        {(status.loginEnabled || status.githubEnabled) && (
           <Link component="button" type="button" variant="body2" sx={{ mt: 2 }} onClick={() => setUseKey(!useKey)}>
             {useKey ? 'Sign in with a username instead' : 'Use an API key instead'}
           </Link>

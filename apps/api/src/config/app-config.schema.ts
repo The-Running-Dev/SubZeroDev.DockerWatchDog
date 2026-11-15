@@ -89,6 +89,32 @@ export const appConfigSchema = z.object({
     .string()
     .regex(/^\d+(ms|s|m|h|d|w|y)?$/, 'Expected a duration such as "12h"')
     .default('12h'),
+
+  // GitHub sign-in through Supabase Auth, the same identity project the Dashboard uses. It turns on when
+  // SupabaseUrl, SupabasePublishableKey, AllowedUserIds and PublicUrl are all set.
+
+  /** The Supabase project URL, or its Auth URL (…/auth/v1). */
+  SupabaseUrl: z
+    .string()
+    .trim()
+    .default('')
+    .refine((value) => value === '' || /^https:\/\/[^/]+(\/auth\/v1)?\/?$/.test(value), {
+      message: 'Expected https://<project>.supabase.co, optionally with /auth/v1',
+    })
+    .transform((value) => value.replace(/\/+$/, '').replace(/\/auth\/v1$/, '')),
+  /** The modern sb_publishable_ key (never a secret or service-role key). */
+  SupabasePublishableKey: z.string().trim().default(''),
+  /** Supabase user IDs (UUIDs) allowed to sign in; anyone else is refused. */
+  AllowedUserIds: list([]),
+  /** The address users open, e.g. https://watchdog.example.com; GitHub sign-in returns to it. */
+  PublicUrl: z
+    .string()
+    .trim()
+    .default('')
+    .refine((value) => value === '' || /^https?:\/\/[^/]+\/?$/.test(value), {
+      message: 'Expected an origin such as https://watchdog.example.com',
+    })
+    .transform((value) => value.replace(/\/+$/, '')),
 });
 
 export type AppConfig = z.output<typeof appConfigSchema>;

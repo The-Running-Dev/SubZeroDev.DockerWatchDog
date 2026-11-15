@@ -20,6 +20,7 @@ export class InfoController {
       dockerVersion: await this.docker.version(),
       authEnabled: this.auth.enabled,
       loginEnabled: this.auth.loginEnabled,
+      githubEnabled: this.auth.githubEnabled,
     };
   }
 }

@@ -97,6 +97,10 @@ Settings are read in this order, later wins:
 | `AdminUser`, `AdminPassword`  | `""`                                             | UI login; both must be set to turn it on                                                   |
 | `JwtSecret`                   | `""`                                             | Signs login tokens; random when empty, so logins end on restart                            |
 | `JwtExpiresIn`                | `12h`                                            | Login token lifetime                                                                       |
+| `SupabaseUrl`                 | `""`                                             | Supabase project URL (or its `/auth/v1` URL) for GitHub sign-in                            |
+| `SupabasePublishableKey`      | `""`                                             | That project's publishable key                                                             |
+| `AllowedUserIds`              | `[]`                                             | Supabase user IDs allowed to sign in with GitHub                                           |
+| `PublicUrl`                   | `""`                                             | The address users open, e.g. `https://watchdog.example.com`; GitHub sign-in returns to it  |
 
 Other environment variables:
 
@@ -108,7 +112,13 @@ Other environment variables:
 
 ## Authentication
 
-Off by default, as before. Set `ApiKey` to require it on every route except `/health`, `/api/auth/status` and `/api/auth/login`; clients send it in the `x-api-key` header (the UI can also sign in with it). Set `AdminUser` and `AdminPassword` to sign in to the UI with a password; requests then carry `Authorization: Bearer <token>`.
+Off by default, as before. Set `ApiKey` to require it on every route except `/health` and the sign-in routes under `/api/auth`; clients send it in the `x-api-key` header (the UI can also sign in with it). Set `AdminUser` and `AdminPassword` to sign in to the UI with a password; requests then carry `Authorization: Bearer <token>`.
+
+### GitHub sign-in
+
+The UI can sign in with GitHub through Supabase Auth, the same way the SubZeroDev Dashboard does: a PKCE sign-in against the project's GitHub provider, then a check that the Supabase user ID is in `AllowedUserIds`. Set `SupabaseUrl`, `SupabasePublishableKey`, `AllowedUserIds` and `PublicUrl`, and in the Supabase project add `<PublicUrl>/api/auth/callback` to **Authentication → URL Configuration → Redirect URLs**. Set `JwtSecret` too, or sign-ins end when the watchdog restarts. No Supabase session is kept: the watchdog issues its own login token.
+
+Any sign-in method turns auth on for every route, so machine callers then need `ApiKey`.
 
 With `ApiKey` set, add the header to the Uptime Kuma webhook (below) and to any CI step that calls the watchdog.
 

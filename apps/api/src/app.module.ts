@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AuthController } from './auth/auth.controller.js';
 import { AuthGuard } from './auth/auth.guard.js';
 import { AuthService } from './auth/auth.service.js';
+import { SupabaseAuthClient } from './auth/supabase-auth.client.js';
 import { loadConfig } from './config/config.loader.js';
 import { ConfigController } from './config/config.controller.js';
 import { ConfigService } from './config/config.service.js';
@@ -50,6 +51,7 @@ import { WebhookController } from './webhook/webhook.controller.js';
     { provide: ConfigService, useFactory: () => new ConfigService(loadConfig()) },
     LogService,
     AuthService,
+    SupabaseAuthClient,
     CommandRunner,
     DockerService,
     RestartExecutor,
