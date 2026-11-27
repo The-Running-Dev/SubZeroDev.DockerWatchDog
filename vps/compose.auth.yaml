@@ -1,0 +1,6 @@
+# OpenTofu adds this overlay and supplies ApiKey through the Portainer stack environment.
+# The key is provisioned before apply so Uptime Kuma can be configured first.
+services:
+  watchdog:
+    environment:
+      ApiKey: ${ApiKey:?Set ApiKey before deploying the VPS Watchdog}

@@ -5,8 +5,8 @@
 .DESCRIPTION
   Reads User-scope environment variables, never prints them, and sets them for this process only:
   CLOUDFLARE_API_TOKEN, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, TF_VAR_state_passphrase,
-  TF_VAR_portainer_api_key, TF_VAR_cf_access_client_id and TF_VAR_cf_access_client_secret. GITHUB_TOKEN falls back to `gh auth token`.
-  The stack has no values of its own, so there is no var-file.
+  TF_VAR_portainer_api_key, TF_VAR_cf_access_client_id, TF_VAR_cf_access_client_secret and TF_VAR_watchdog_api_key.
+  Stage the Watchdog key in Uptime Kuma before applying. GITHUB_TOKEN falls back to `gh auth token`.
 .EXAMPLE
   ./deploy/tofu.ps1 plan
   ./deploy/tofu.ps1 apply
@@ -18,7 +18,7 @@ Set-Location $PSScriptRoot
 
 $required = 'CLOUDFLARE_API_TOKEN', 'R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY',
   'TF_VAR_state_passphrase', 'TF_VAR_portainer_api_key', 'TF_VAR_cf_access_client_id',
-  'TF_VAR_cf_access_client_secret'
+  'TF_VAR_cf_access_client_secret', 'TF_VAR_watchdog_api_key'
 $missing = foreach ($name in $required) {
   # The saved User value wins: a terminal opened before it changed still holds the old one.
   $value = [Environment]::GetEnvironmentVariable($name, 'User')

@@ -63,9 +63,13 @@ module "app" {
 
   name          = "watchdog" # The compose project of the running container; the stack takes it over
   repository    = "The-Running-Dev/SubZeroDev.DockerWatchDog"
-  compose_files = ["vps/docker-compose.yml", "vps/compose.tunnel.yaml"]
+  compose_files = ["vps/docker-compose.yml", "vps/compose.tunnel.yaml", "vps/compose.auth.yaml"]
 
-  routes = { watchdog = "http://watchdog:80" } # watchdog.subzerodev.com (public; set ApiKey to protect /api, see deploy/README.md)
+  routes = { watchdog = "http://watchdog:80" } # watchdog.subzerodev.com
+
+  secrets = {
+    ApiKey = var.watchdog_api_key
+  }
 
   # No image: the container follows :latest by itself (it is the updater), not through Infra.
   portainer_url = var.portainer_url

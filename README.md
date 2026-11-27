@@ -135,6 +135,8 @@ Errors are JSON with `statusCode` and `message`; a missing project or container 
 
 ## Uptime Kuma
 
+For the provisioned VPS, follow the [Kuma cutover and verification runbook](deploy/README.md). The VPS uses `http://watchdog/restart` on the shared Docker network and requires the Watchdog API key. The example below uses the host port in the standalone Compose configuration.
+
 1. **Settings → Notifications → Set Up Notification**: type **Webhook**, Post URL `http://<watchdog-host>:7000/restart`, body preset `application/json`. With `ApiKey` set, add the additional header `{"x-api-key": "<key>"}`.
 2. On the container's monitor, turn that notification on and set **Description** to `container-<name>` (e.g. `container-torrents` restarts `torrents`).
 
