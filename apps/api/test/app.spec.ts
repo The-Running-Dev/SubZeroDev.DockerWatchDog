@@ -31,6 +31,7 @@ describe('App', () => {
       dockerVersion: '29.0.0',
       authEnabled: false,
       loginEnabled: false,
+      githubEnabled: false,
     });
   });
 

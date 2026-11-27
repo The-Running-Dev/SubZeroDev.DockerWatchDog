@@ -5,8 +5,10 @@
 .DESCRIPTION
   Reads User-scope environment variables, never prints them, and sets them for this process only:
   CLOUDFLARE_API_TOKEN, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, TF_VAR_state_passphrase,
-  TF_VAR_portainer_api_key, TF_VAR_cf_access_client_id, TF_VAR_cf_access_client_secret and TF_VAR_watchdog_api_key.
-  Stage the Watchdog key in Uptime Kuma before applying. GITHUB_TOKEN falls back to `gh auth token`.
+  TF_VAR_portainer_api_key, TF_VAR_cf_access_client_id, TF_VAR_cf_access_client_secret, TF_VAR_watchdog_api_key,
+  TF_VAR_oidc_issuer and TF_VAR_owner_subject. Stage the Watchdog API key in Uptime Kuma before applying.
+  TF_VAR_supabase_publishable_key falls back to SUPABASE_PUBLISHABLE_KEY in TF_VAR_secrets (the
+  Dashboard's map; nothing else is taken from it). GITHUB_TOKEN falls back to `gh auth token`. There is no var-file.
 .EXAMPLE
   ./deploy/tofu.ps1 plan
   ./deploy/tofu.ps1 apply
@@ -18,7 +20,7 @@ Set-Location $PSScriptRoot
 
 $required = 'CLOUDFLARE_API_TOKEN', 'R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY',
   'TF_VAR_state_passphrase', 'TF_VAR_portainer_api_key', 'TF_VAR_cf_access_client_id',
-  'TF_VAR_cf_access_client_secret', 'TF_VAR_watchdog_api_key'
+  'TF_VAR_cf_access_client_secret', 'TF_VAR_watchdog_api_key', 'TF_VAR_oidc_issuer', 'TF_VAR_owner_subject'
 $missing = foreach ($name in $required) {
   # The saved User value wins: a terminal opened before it changed still holds the old one.
   $value = [Environment]::GetEnvironmentVariable($name, 'User')
@@ -26,8 +28,17 @@ $missing = foreach ($name in $required) {
   if ($value) { Set-Item "env:$name" $value } else { $name }
 }
 if (-not $env:GITHUB_TOKEN) { $env:GITHUB_TOKEN = (gh auth token) }
-if ($missing) { throw "Set these environment variables first: $($missing -join ', ')" }
 
+$publishableKey = [Environment]::GetEnvironmentVariable('TF_VAR_supabase_publishable_key', 'User')
+if (-not $publishableKey) { $publishableKey = $env:TF_VAR_supabase_publishable_key }
+if (-not $publishableKey) {
+  $dashboardSecrets = [Environment]::GetEnvironmentVariable('TF_VAR_secrets', 'User')
+  if ($dashboardSecrets) { $publishableKey = ($dashboardSecrets | ConvertFrom-Json).SUPABASE_PUBLISHABLE_KEY }
+}
+if ($publishableKey) { $env:TF_VAR_supabase_publishable_key = $publishableKey }
+else { $missing = @($missing) + 'TF_VAR_supabase_publishable_key' }
+
+if ($missing) { throw "Set these environment variables first: $($missing -join ', ')" }
 
 $env:AWS_ACCESS_KEY_ID = $env:R2_ACCESS_KEY_ID
 $env:AWS_SECRET_ACCESS_KEY = $env:R2_SECRET_ACCESS_KEY

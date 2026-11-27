@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from './store/auth';
 import { AUTH_OFF, mockApi, PROJECTS, renderApp, resetState, UPDATER } from './test-utils';
 
-const AUTH_ON = { authEnabled: true, loginEnabled: true };
+const AUTH_ON = { authEnabled: true, loginEnabled: true, githubEnabled: false };
 
 const pages = {
   'GET /api/projects': PROJECTS,
@@ -114,5 +114,53 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
     await waitFor(() => expect(screen.getByText('plex')).toBeInTheDocument());
+  });
+
+  it('offers GitHub sign-in, with the password form, when both are on', async () => {
+    mockApi({ 'GET /api/auth/status': { ...AUTH_ON, githubEnabled: true } });
+
+    renderApp('/login');
+
+    expect(await screen.findByRole('link', { name: 'Sign in with GitHub' })).toHaveAttribute(
+      'href',
+      '/api/auth/github',
+    );
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+  });
+
+  it('shows only GitHub sign-in when the password login is off', async () => {
+    mockApi({ 'GET /api/auth/status': { ...AUTH_ON, loginEnabled: false, githubEnabled: true } });
+
+    renderApp('/login');
+
+    expect(await screen.findByRole('link', { name: 'Sign in with GitHub' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Username')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Use an API key instead' })).toBeInTheDocument();
+  });
+
+  it('takes the token GitHub sign-in hands back and drops it from the address', async () => {
+    mockApi({ 'GET /api/auth/status': { ...AUTH_ON, githubEnabled: true }, ...pages });
+
+    const { router } = renderApp('/login#token=jwt-from-github&username=octocat');
+
+    expect(await screen.findByText('plex')).toBeInTheDocument();
+    expect(useAuthStore.getState().credential).toEqual({
+      kind: 'token',
+      token: 'jwt-from-github',
+      username: 'octocat',
+    });
+    expect(router.state.location.hash).toBe('');
+  });
+
+  it('shows why GitHub sign-in failed', async () => {
+    mockApi({ 'GET /api/auth/status': { ...AUTH_ON, githubEnabled: true } });
+
+    const { router } = renderApp(
+      `/login?${new URLSearchParams({ error: "'mallory' is not allowed to use this watchdog." })}`,
+    );
+
+    expect(await screen.findByText("'mallory' is not allowed to use this watchdog.")).toBeInTheDocument();
+    await waitFor(() => expect(router.state.location.search).toBe(''));
+    expect(useAuthStore.getState().credential).toBeNull();
   });
 });

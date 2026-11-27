@@ -78,7 +78,7 @@ export function renderApp(path: string) {
   return { router, ...render(<App router={router} />) };
 }
 
-export const AUTH_OFF = { authEnabled: false, loginEnabled: false };
+export const AUTH_OFF = { authEnabled: false, loginEnabled: false, githubEnabled: false };
 
 export const UPDATER: UpdaterStatus = {
   scheduled: true,

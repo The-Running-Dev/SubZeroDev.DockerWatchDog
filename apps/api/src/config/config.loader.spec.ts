@@ -65,6 +65,27 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ configFile, env: { CronSchedule: 'daily' } })).toThrow(/CronSchedule/);
     expect(() => loadConfig({ configFile: join(tree.root, 'bad.json'), env: {} })).toThrow(/expected a JSON object/);
   });
+
+  it('normalizes the GitHub sign-in addresses', () => {
+    const values = loadConfig({
+      configFile,
+      env: {
+        SupabaseUrl: 'https://project.supabase.co/auth/v1/',
+        PublicUrl: 'https://watchdog.example.com/',
+        AllowedUserIds: 'a, b',
+      },
+    });
+
+    expect(values).toMatchObject({
+      SupabaseUrl: 'https://project.supabase.co',
+      PublicUrl: 'https://watchdog.example.com',
+      AllowedUserIds: ['a', 'b'],
+    });
+    expect(() => loadConfig({ configFile, env: { SupabaseUrl: 'http://project.supabase.co' } })).toThrow(/SupabaseUrl/);
+    expect(() => loadConfig({ configFile, env: { PublicUrl: 'https://watchdog.example.com/app' } })).toThrow(
+      /PublicUrl/,
+    );
+  });
 });
 
 describe('ConfigService', () => {
@@ -79,5 +100,19 @@ describe('ConfigService', () => {
 
     expect(service.authEnabled).toBe(true);
     expect(service.masked()).toMatchObject({ ApiKey: MASK, JwtSecret: '' });
+  });
+
+  it('turns GitHub sign-in on only when all four of its settings are set', () => {
+    const github = {
+      ...loadConfig({ configFile, env: {} }),
+      SupabaseUrl: 'https://project.supabase.co',
+      SupabasePublishableKey: 'sb_publishable_x',
+      AllowedUserIds: ['6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b'],
+      PublicUrl: 'https://watchdog.example.com',
+    };
+
+    expect(new ConfigService(github)).toMatchObject({ githubEnabled: true, tokensEnabled: true, authEnabled: true });
+    expect(new ConfigService({ ...github, PublicUrl: '' }).githubEnabled).toBe(false);
+    expect(new ConfigService({ ...github, AllowedUserIds: [] }).authEnabled).toBe(false);
   });
 });

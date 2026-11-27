@@ -79,6 +79,7 @@ export function SettingsPage() {
               ['Running in Docker', info.data.insideDocker ? 'yes' : 'no'],
               ['API key or login required', info.data.authEnabled ? 'yes' : 'no'],
               ['Admin login', info.data.loginEnabled ? 'configured' : 'not configured'],
+              ['GitHub sign-in', info.data.githubEnabled ? 'configured' : 'not configured'],
             ]}
           />
         )}

@@ -4,4 +4,6 @@ export interface AuthStatus {
   authEnabled: boolean;
   /** True when the admin login is configured. */
   loginEnabled: boolean;
+  /** True when GitHub sign-in (through Supabase) is configured. */
+  githubEnabled: boolean;
 }

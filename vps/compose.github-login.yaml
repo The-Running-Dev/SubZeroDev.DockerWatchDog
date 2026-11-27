@@ -1,0 +1,9 @@
+# OpenTofu adds this overlay with the GitHub sign-in settings.
+services:
+  watchdog:
+    environment:
+      PublicUrl: https://watchdog.subzerodev.com
+      SupabaseUrl: ${SupabaseUrl:?Set SupabaseUrl before enabling GitHub sign-in}
+      SupabasePublishableKey: ${SupabasePublishableKey:?Set SupabasePublishableKey before enabling GitHub sign-in}
+      AllowedUserIds: ${AllowedUserIds:?Set AllowedUserIds before enabling GitHub sign-in}
+      JwtSecret: ${JwtSecret:?Set JwtSecret before enabling GitHub sign-in}

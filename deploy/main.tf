@@ -61,15 +61,27 @@ provider "portainer" {
 module "app" {
   source = "git::https://github.com/The-Running-Dev/SubZeroDev.Infra.git//modules/app?ref=v2.1.0"
 
-  name          = "watchdog" # The compose project of the running container; the stack takes it over
-  repository    = "The-Running-Dev/SubZeroDev.DockerWatchDog"
-  compose_files = ["vps/docker-compose.yml", "vps/compose.tunnel.yaml", "vps/compose.auth.yaml"]
+  name       = "watchdog" # The compose project of the running container; the stack takes it over
+  repository = "The-Running-Dev/SubZeroDev.DockerWatchDog"
+  compose_files = [
+    "vps/docker-compose.yml",
+    "vps/compose.tunnel.yaml",
+    "vps/compose.auth.yaml",
+    "vps/compose.github-login.yaml",
+  ]
 
   routes = { watchdog = "http://watchdog:80" } # watchdog.subzerodev.com
 
-  secrets = {
-    ApiKey = var.watchdog_api_key
+  # Keep the staged API key for Kuma and CI. JwtSecret keeps browser login tokens valid across restarts.
+  env = {
+    SupabaseUrl    = var.oidc_issuer
+    AllowedUserIds = var.owner_subject
   }
+  secrets = {
+    SupabasePublishableKey = var.supabase_publishable_key
+    ApiKey                 = var.watchdog_api_key
+  }
+  generated = ["JwtSecret"]
 
   # No image: the container follows :latest by itself (it is the updater), not through Infra.
   portainer_url = var.portainer_url

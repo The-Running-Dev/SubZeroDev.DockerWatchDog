@@ -8,4 +8,6 @@ export interface Info {
   authEnabled?: boolean;
   /** True when the admin login is configured. */
   loginEnabled?: boolean;
+  /** True when GitHub sign-in is configured. */
+  githubEnabled?: boolean;
 }
