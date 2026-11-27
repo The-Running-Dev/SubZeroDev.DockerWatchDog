@@ -116,7 +116,7 @@ Off by default, as before. Set `ApiKey` to require it on every route except `/he
 
 ### GitHub sign-in
 
-The UI can sign in with GitHub through Supabase Auth, the same way the SubZeroDev Dashboard does: a PKCE sign-in against the project's GitHub provider, then a check that the Supabase user ID is in `AllowedUserIds`. Set `SupabaseUrl`, `SupabasePublishableKey`, `AllowedUserIds` and `PublicUrl`, and in the Supabase project add `<PublicUrl>/api/auth/callback` to **Authentication → URL Configuration → Redirect URLs**. Set `JwtSecret` too, or sign-ins end when the watchdog restarts. No Supabase session is kept: the watchdog issues its own login token.
+The UI can sign in through the configured Supabase project's GitHub provider using PKCE. Watchdog checks the Supabase user ID against `AllowedUserIds` and issues its own login token. Set `SupabaseUrl`, `SupabasePublishableKey`, `AllowedUserIds` and `PublicUrl`, and in the Supabase project add `<PublicUrl>/api/auth/callback` to **Authentication → URL Configuration → Redirect URLs**. Set `JwtSecret` too, or sign-ins end when the watchdog restarts.
 
 Any sign-in method turns auth on for every route, so machine callers then need `ApiKey`.
 
@@ -144,6 +144,8 @@ With `ApiKey` set, add the header to the Uptime Kuma webhook (below) and to any 
 Errors are JSON with `statusCode` and `message`; a missing project or container is a 404.
 
 ## Uptime Kuma
+
+For the provisioned VPS, follow the [Kuma cutover and verification runbook](deploy/README.md). The VPS uses `http://watchdog/restart` on the shared Docker network and requires the Watchdog API key. The example below uses the host port in the standalone Compose configuration.
 
 1. **Settings → Notifications → Set Up Notification**: type **Webhook**, Post URL `http://<watchdog-host>:7000/restart`, body preset `application/json`. With `ApiKey` set, add the additional header `{"x-api-key": "<key>"}`.
 2. On the container's monitor, turn that notification on and set **Description** to `container-<name>` (e.g. `container-torrents` restarts `torrents`).

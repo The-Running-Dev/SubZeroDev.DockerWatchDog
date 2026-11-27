@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
 import { SupabaseAuthClient } from '../src/auth/supabase-auth.client.js';
-import { createTestApp, type TestApp } from './helpers.js';
+import { container, createTestApp, type TestApp } from './helpers.js';
 
 const OWNER = '6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b';
 const GITHUB = {
@@ -73,6 +73,27 @@ describe('GitHub sign-in', () => {
       .expect(200, { authEnabled: false, loginEnabled: false, githubEnabled: false });
     await request(server).get('/api/auth/github').expect(404);
     await request(server).get('/api/auth/callback?code=x').expect(404);
+  });
+
+  it('keeps Kuma API-key restarts independent of GitHub sign-in', async () => {
+    t = await createTestApp({ ...GITHUB, ApiKey: 'kuma-test-key' });
+    const server = t.app.getHttpServer();
+    const calls = fakeSupabase(t);
+    const down = { monitor: { description: 'container-plex' }, heartbeat: { status: 0 } };
+
+    t.docker.containers = [container('plex')];
+    t.runner.calls.length = 0;
+
+    await request(server).post('/restart').send(down).expect(401);
+    expect(t.runner.calls).toEqual([]);
+
+    await request(server)
+      .post('/restart')
+      .set('x-api-key', 'kuma-test-key')
+      .send(down)
+      .expect(200, { status: 'plex Restarted' });
+    expect(t.runner.calls).toEqual([expect.objectContaining({ args: ['restart', 'plex'] })]);
+    expect(calls).toEqual([]);
   });
 
   it('sends the browser to Supabase with a PKCE challenge and a flow cookie', async () => {

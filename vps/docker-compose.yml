@@ -12,15 +12,6 @@ services:
     environment:
       TZ: UTC
       PORT: "80"
-      # GitHub sign-in through the Dashboard's Supabase project. The stack sets these (deploy/main.tf);
-      # left empty, the watchdog falls back to config.overrides.json.
-      PublicUrl: https://watchdog.subzerodev.com
-      SupabaseUrl: ${SupabaseUrl:-}
-      SupabasePublishableKey: ${SupabasePublishableKey:-}
-      AllowedUserIds: ${AllowedUserIds:-}
-      JwtSecret: ${JwtSecret:-}
-      # For machine callers (Uptime Kuma, CI) once sign-in turns auth on: `tofu output -raw api_key`.
-      ApiKey: ${ApiKey:-}
     volumes:
       - /srv/watchdog/config.overrides.json:/app/config.overrides.json
       - /srv:/projects

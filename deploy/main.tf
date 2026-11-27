@@ -61,22 +61,25 @@ provider "portainer" {
 module "app" {
   source = "git::https://github.com/The-Running-Dev/SubZeroDev.Infra.git//modules/app?ref=v2.1.0"
 
-  name          = "watchdog" # The compose project of the running container; the stack takes it over
-  repository    = "The-Running-Dev/SubZeroDev.DockerWatchDog"
-  compose_files = ["vps/docker-compose.yml", "vps/compose.tunnel.yaml"]
+  name       = "watchdog" # The compose project of the running container; the stack takes it over
+  repository = "The-Running-Dev/SubZeroDev.DockerWatchDog"
+  compose_files = [
+    "vps/docker-compose.yml",
+    "vps/compose.tunnel.yaml",
+    "vps/compose.auth.yaml",
+    "vps/compose.github-login.yaml",
+  ]
 
   routes = { watchdog = "http://watchdog:80" } # watchdog.subzerodev.com
 
-  # GitHub sign-in through the Dashboard's Supabase project; only the owner may sign in. JwtSecret keeps
-  # logins valid across restarts and updates. Sign-in turns auth on for every route, so machine callers
-  # (the Uptime Kuma webhook, CI) send ApiKey in the x-api-key header.
+  # Keep the staged API key for Kuma and CI. JwtSecret keeps browser login tokens valid across restarts.
   env = {
     SupabaseUrl    = var.oidc_issuer
     AllowedUserIds = var.owner_subject
   }
   secrets = {
     SupabasePublishableKey = var.supabase_publishable_key
-    ApiKey                 = random_password.api_key.result
+    ApiKey                 = var.watchdog_api_key
   }
   generated = ["JwtSecret"]
 
@@ -99,16 +102,4 @@ import {
 
 output "public_url" {
   value = "https://watchdog.subzerodev.com"
-}
-
-# Made here rather than in generated, so `tofu output -raw api_key` can hand it to Uptime Kuma.
-resource "random_password" "api_key" {
-  length  = 48
-  special = false
-}
-
-output "api_key" {
-  description = "The watchdog's x-api-key, for the Uptime Kuma webhook and CI."
-  value       = random_password.api_key.result
-  sensitive   = true
 }
